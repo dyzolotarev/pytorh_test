@@ -27,11 +27,25 @@ mnist_transform = transforms.Compose([
                 transforms.Normalize((0.1307,), (0.3081,)),
 ])
 
-def mnist2(batch_size=50, valid=0, shuffle=True, transform=mnist_transform, path='./MNIST_data'):
-    test_data = datasets.MNIST(path, train=False, download=True, transform=transform)
-    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+datasets = { "MNIST": datasets.MNIST, "FASHIONMNIST": datasets.FashionMNIST}
+
+def p(end='\n', **pairs):
+    for var, val in pairs.items():
+        print(f"{var}: {val}", end=end)
+
+def mnist2(batch_size=50, valid=0, shuffle=True, transform=mnist_transform, path='./MNIST_data', pin_memory=True, num_workers=6):
+    return loader("MNIST", batch_size, valid, shuffle, transform, path, pin_memory, num_workers)
+
+
+def fashion_mnist(batch_size=64, valid=0, shuffle=True, transform=mnist_transform, path='./FASHIONMNIST_data', pin_memory=True, num_workers=6):
+    return loader("FASHIONMNIST", batch_size, valid, shuffle, transform, path, pin_memory, num_workers)
+
+
+def loader (dataset, batch_size, valid, shuffle, transform, path, pin_memory, num_workers):
+    test_data = datasets[dataset](path, train=False, download=True, transform=transform)
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False, pin_memory=pin_memory, num_workers=num_workers)
     
-    train_data = datasets.MNIST(path, train=True, download=True, transform=transform)
+    train_data = datasets[dataset](path, train=True, download=True, transform=transform)
     if valid > 0:
         num_train = len(train_data)
         indices = list(range(num_train))
@@ -42,12 +56,12 @@ def mnist2(batch_size=50, valid=0, shuffle=True, transform=mnist_transform, path
         train_sampler = SubsetRandomSampler(train_idx)
         valid_sampler = SubsetRandomSampler(valid_idx)
 
-        train_loader = DataLoader(train_data, batch_size=batch_size, sampler=train_sampler)
-        valid_loader = DataLoader(train_data, batch_size=batch_size, sampler=valid_sampler)
+        train_loader = DataLoader(train_data, batch_size=batch_size, sampler=train_sampler, pin_memory=pin_memory)
+        valid_loader = DataLoader(train_data, batch_size=batch_size, sampler=valid_sampler, pin_memory=pin_memory)
     
         return train_loader, valid_loader, test_loader
     else:
-        train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle)
+        train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle, pin_memory=pin_memory)
         return train_loader, test_loader
     
 
@@ -99,7 +113,8 @@ def plot_imgs(images, shape):
     fig = plt.figure(figsize=shape[::-1], dpi=80)
     for j in range(1, len(images) + 1):
         ax = fig.add_subplot(shape[0], shape[1], j)
-        ax.matshow(images[j - 1, :, :, :], cmap=matplotlib.cm.binary)
+        ax.matshow(images[j - 1, :, :], cmap=matplotlib.cm.binary)
+#         ax.matshow(images[j - 1, :, :, :], cmap=matplotlib.cm.binary)
         plt.xticks(np.array([]))
         plt.yticks(np.array([]))
     plt.show()
